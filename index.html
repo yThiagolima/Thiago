@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teste Oficial: Você é uma Gnomo?</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="magic-bg">
+    <span class="orb orb-1"></span>
+    <span class="orb orb-2"></span>
+    <span class="orb orb-3"></span>
+  </div>
+
+  <main class="app">
+    <section class="hero card" id="inicio">
+      <div class="badge">🧚‍♀️ Jardim Encantado • Verificação Oficial</div>
+      <h1>Existe uma gnomo escondida nessa foto?</h1>
+      <p class="lead">
+        Um teste mágico será iniciado para analisar traços, energia de jardim,
+        nível de fofura mística e compatibilidade com cogumelos encantados.
+      </p>
+
+      <div class="photo-frame">
+        <img src="assets/gnomo.png" alt="Gnomo no jardim encantado" />
+        <div class="shine"></div>
+      </div>
+
+      <button class="primary-btn" id="startBtn">Iniciar análise mágica ✨</button>
+      <p class="tiny">Resultado 100% duvidoso, mas extremamente oficial.</p>
+    </section>
+
+    <section class="scanner card hidden" id="scanner">
+      <h2>Escaneando evidências...</h2>
+      <div class="scan-box">
+        <img src="assets/gnomo.png" alt="Análise mágica" />
+        <div class="scan-line"></div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress" id="progress"></div>
+      </div>
+      <ul class="checks" id="checks">
+        <li>🌿 Procurando energia de jardim...</li>
+        <li>🍄 Medindo afinidade com cogumelos...</li>
+        <li>🧢 Detectando chapéu pontudo interno...</li>
+        <li>✨ Calculando nível de mini fofura...</li>
+      </ul>
+    </section>
+
+    <section class="result card hidden" id="resultado">
+      <div class="result-top">
+        <span class="stamp">CONFIRMADO</span>
+        <h2>Ela é realmente uma gnomo.</h2>
+        <p>
+          Após uma análise extremamente séria feita por folhas, cogumelos e três fadas
+          formadas em jardinologia, o resultado foi confirmado:
+        </p>
+      </div>
+
+      <div class="certificate">
+        <div>
+          <span class="label">Compatibilidade gnômica</span>
+          <strong>99,7%</strong>
+        </div>
+        <div>
+          <span class="label">Altura mística</span>
+          <strong>Bem pequena</strong>
+        </div>
+        <div>
+          <span class="label">Residência ideal</span>
+          <strong>Jardim encantado</strong>
+        </div>
+      </div>
+
+      <div class="final-photo">
+        <img src="assets/gnomo.png" alt="Retrato de gnomo" />
+      </div>
+
+      <div class="details-grid">
+        <article>
+          <span>🍄</span>
+          <h3>Talento principal</h3>
+          <p>Ficar absurdamente charmosa entre cogumelos gigantes e folhas com gotinhas.</p>
+        </article>
+        <article>
+          <span>🌸</span>
+          <h3>Poder especial</h3>
+          <p>Transformar qualquer jardim comum em cenário de conto de fadas.</p>
+        </article>
+        <article>
+          <span>🪄</span>
+          <h3>Diagnóstico</h3>
+          <p>Pequena no tamanho, gigante no carisma. Caso raro de gnomo premium.</p>
+        </article>
+      </div>
+
+      <button class="primary-btn" id="shareBtn">Copiar mensagem para enviar 💌</button>
+      <p class="copied" id="copied">Mensagem copiada!</p>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
