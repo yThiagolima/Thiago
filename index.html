@@ -12,13 +12,13 @@
 <style>
 #authScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}
 .authbox{width:min(420px,100%);background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:var(--shadow)}
-.authbox h1{margin:0 0 6px;font-size:24px}.authbox p{margin:0 0 18px}.authbox .field{margin:10px 0}.authmsg{margin-top:12px;font-size:12px;color:var(--muted)}
+.authbox h1{margin:0 0 6px;font-size:24px}.authuser{font-weight:800;font-size:15px;margin:8px 0 14px}.authbox p{margin:0 0 18px}.authbox .field{margin:10px 0}.authmsg{margin-top:12px;font-size:12px;color:var(--muted)}
 .hiddenAuth{display:none!important}.logout{position:absolute;bottom:14px;left:12px;right:12px;padding:8px;border-radius:8px;background:#252d3c;color:#cbd5e1;font-size:11px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<div id="authScreen"><div class="authbox"><h1>Meu Financeiro</h1><p class="muted">Entre para sincronizar seus dados entre celular e PC.</p><div class="field"><label>E-mail</label><input id="authEmail" type="email" autocomplete="email" placeholder="seu@email.com"></div><div class="field"><label>Senha</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="••••••••"></div><div class="actions"><button class="btn secondary" onclick="signUp()">Criar conta</button><button class="btn" onclick="signIn()">Entrar</button></div><div id="authMsg" class="authmsg"></div></div></div>
+<div id="authScreen"><div class="authbox"><h1>Meu Financeiro</h1><div class="authuser">👤 Thiago</div><p class="muted">Acesso único do sistema. Seus dados ficam sincronizados entre celular e PC.</p><div class="field"><label>Senha</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="Digite sua senha"></div><label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-top:10px"><input id="rememberMe" type="checkbox" checked> Manter acesso salvo neste dispositivo</label><div class="actions"><button class="btn" onclick="signIn()">Entrar</button></div><div id="authMsg" class="authmsg"></div></div></div>
 <div class="app">
 <aside class="sidebar"><div class="brand">Meu Financeiro<small>simples, focado nas entregas e na moto</small></div><nav class="nav">
 <button data-page="dashboard" class="active">🏠 <span>Dashboard</span></button>
@@ -157,24 +157,27 @@ async function ensureDefaultPots(){
   db.pots=structuredClone(base.pots);
   await saveCloud();
 }
-function showAuth(msg=''){document.getElementById('authScreen').classList.remove('hiddenAuth');document.getElementById('authMsg').textContent=msg||''}
+function showAuth(msg=''){document.getElementById('authScreen').classList.remove('hiddenAuth');document.getElementById('authMsg').textContent=msg||'';document.getElementById('authPassword').value=''}
 function hideAuth(){document.getElementById('authScreen').classList.add('hiddenAuth')}
+const FIXED_AUTH_EMAIL='ythiagolima@gmail.com';
 async function signIn(){
-  const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;
-  if(!email||!password)return showAuth('Informe e-mail e senha.');
-  const r=await supabaseClient.auth.signInWithPassword({email,password});
-  if(r.error)return showAuth(r.error.message);
+  const password=document.getElementById('authPassword').value;
+  if(!password)return showAuth('Informe a senha.');
+  const r=await supabaseClient.auth.signInWithPassword({email:FIXED_AUTH_EMAIL,password});
+  if(r.error)return showAuth('Senha incorreta ou usuário não configurado.');
+  const remember=document.getElementById('rememberMe').checked;
+  localStorage.setItem('meu_financeiro_lembrar',remember?'1':'0');
+  if(!remember)localStorage.removeItem('sb-'+SUPABASE_URL.split('//')[1].split('.')[0]+'-auth-token');
   await bootCloud();
 }
-async function signUp(){
-  const email=document.getElementById('authEmail').value.trim(),password=document.getElementById('authPassword').value;
-  if(!email||password.length<6)return showAuth('Informe um e-mail e uma senha com pelo menos 6 caracteres.');
-  const r=await supabaseClient.auth.signUp({email,password});
-  if(r.error)return showAuth(r.error.message);
-  if(!r.data.session)return showAuth('Conta criada. Verifique seu e-mail para confirmar a conta e depois entre.');
-  session=r.data.session;await bootCloud();
-}
 async function signOut(){await supabaseClient.auth.signOut();session=null;cloudReady=false;showAuth('Você saiu da conta.')}
+async function prepareRememberedSession(){
+  const remember=localStorage.getItem('meu_financeiro_lembrar');
+  if(remember==='0'){
+    await supabaseClient.auth.signOut();
+    session=null;
+  }
+}
 async function bootCloud(){
   const g=await supabaseClient.auth.getSession();session=g.data.session;
   if(!session){showAuth();render();return}
@@ -191,6 +194,6 @@ async function bootCloud(){
   }catch(err){console.error(err);showAuth('Não foi possível carregar o banco. Confira as tabelas e as permissões no Supabase.')}
 }
 supabaseClient.auth.onAuthStateChange((_event,s)=>{session=s});
-window.addEventListener('load',bootCloud);
+window.addEventListener('load',async()=>{await prepareRememberedSession();await bootCloud();});
 render();
 </script></body></html>
