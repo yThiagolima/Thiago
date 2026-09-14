@@ -64,7 +64,7 @@
 const SUPABASE_URL='https://snfedflkcjxebqydwxln.supabase.co';
 const SUPABASE_KEY='sb_publishable_YH4gSCW-sJZIKvY9P135Kw_nMqitPCm';
 const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-const KEY='meu_financeiro_2rendas_v11';
+const KEY='meu_financeiro_2rendas_v14';
 const oldKeys=['meu_financeiro_2rendas_v10','meu_financeiro_2rendas_v9','meu_financeiro_2rendas_v8','meu_financeiro_2rendas_v7','meu_financeiro_2rendas_v6','meu_financeiro_2rendas_v5','meu_financeiro_2rendas'];
 const base={deliveries:[],fuel:[],maintenance:[],pots:[{id:uid(),name:'🔧 Moto / manutenção',pct:12.5,balance:0,target:3000},{id:uid(),name:'💳 Dívidas',pct:18.75,balance:0,target:3000},{id:uid(),name:'🏦 Guardar',pct:62.5,balance:0,target:10000},{id:uid(),name:'🎉 Lazer',pct:6.25,balance:0,target:1000}]};
 let db=structuredClone(base),session=null,cloudReady=false;
@@ -78,6 +78,7 @@ function monthLabel(m){return new Date(m+'-01T12:00:00').toLocaleDateString('pt-
 function normalizeLocal(d){d=structuredClone(d||base);d.deliveries=Array.isArray(d.deliveries)?d.deliveries:[];d.fuel=Array.isArray(d.fuel)?d.fuel:[];d.maintenance=Array.isArray(d.maintenance)?d.maintenance:[];let pots=Array.isArray(d.pots)?d.pots:[];if(!pots.length)pots=structuredClone(base.pots);pots=pots.filter(p=>!String(p.name||'').includes('Gasolina'));let total=pots.reduce((s,p)=>s+(Number(p.pct)||0),0)||1;pots.forEach((p,i)=>{if(!p.id||typeof p.id==='number')p.id=uid();p.pct=(Number(p.pct)||0)/total*100;p.balance=Number(p.balance)||0;p.target=Number(p.target)||0});d.pots=pots;d.deliveries.forEach(x=>{if(!x.id||typeof x.id==='number')x.id=uid();x.value=Number(x.value)||0;x.fuelValue=Number(x.fuelValue)||0;x.netValue=Math.max(0,x.value-x.fuelValue);x.hours=Number(x.hours)||0;x.kmStart=Number(x.kmStart)||0;x.kmEnd=Number(x.kmEnd)||0;x.kmTotal=Number(x.kmTotal)||Math.max(0,x.kmEnd-x.kmStart);x.allocations=Array.isArray(x.allocations)?x.allocations:[]});d.fuel.forEach(x=>{if(!x.id||typeof x.id==='number')x.id=uid();x.value=Number(x.value)||0;x.km=Number(x.km)||0});d.maintenance.forEach(x=>{if(!x.id||typeof x.id==='number')x.id=uid();x.value=Number(x.value)||0;x.km=Number(x.km)||0});return d}
 function loadLocal(){try{let raw=localStorage.getItem(KEY);if(raw)return normalizeLocal(JSON.parse(raw));for(const k of oldKeys){let r=localStorage.getItem(k);if(r)return normalizeLocal(JSON.parse(r))}}catch(e){}return structuredClone(base)}
 function localSave(){localStorage.setItem(KEY,JSON.stringify(db))}
+function clearLegacyFinancialCache(){[KEY,...oldKeys].forEach(k=>localStorage.removeItem(k))}
 function deliverySplit(v){let total=db.pots.reduce((s,p)=>s+(Number(p.pct)||0),0)||1;return db.pots.map(p=>({id:p.id,name:p.name,pct:Number(p.pct)||0,val:v*(Number(p.pct)||0)/total}))}
 function deliveryNet(d){return Math.max(0,(Number(d.value)||0)-(Number(d.fuelValue)||0))}
 function deliveryGrossFor(m){return db.deliveries.filter(x=>x.date?.startsWith(m)).reduce((s,x)=>s+(Number(x.value)||0),0)}
@@ -104,9 +105,41 @@ document.getElementById('modalBody').innerHTML=h;document.getElementById('modal'
 function updateDeliveryPreview(){let v=Number(document.getElementById('fvalue')?.value)||0,f=Number(document.getElementById('ffuel')?.value)||0,net=Math.max(0,v-f),sp=deliverySplit(net),start=document.getElementById('fstart')?.value,end=document.getElementById('fend')?.value,h=calcHours(start,end),ks=Number(document.getElementById('fks')?.value)||0,ke=Number(document.getElementById('fke')?.value)||0;document.getElementById('deliveryPreview').innerHTML=`<div class="summaryline"><span>Valor recebido</span><b>${brl(v)}</b></div><div class="summaryline"><span>Gasolina já gasta</span><b class="negative">− ${brl(f)}</b></div><div class="summaryline"><span><b>Valor para dividir</b></span><b>${brl(net)}</b></div><hr style="border:0;border-top:1px solid var(--line)">${sp.map(x=>`<div class="summaryline"><span>${x.name} (${x.pct.toFixed(2)}%)</span><b>${brl(x.val)}</b></div>`).join('')}${h?`<div class="summaryline"><span>Horas</span><b>${h.toFixed(2)}h</b></div>`:''}${ks&&ke?`<div class="summaryline"><span>KM rodados</span><b>${Math.max(0,ke-ks).toFixed(1)} km</b></div>`:''}`}
 function closeModal(){document.getElementById('modal').classList.add('hidden')}
 function applyDelivery(o){let old=db.deliveries.find(x=>x.id===o.id);if(old&&old.allocations)old.allocations.forEach(a=>{let p=db.pots.find(x=>x.id===a.potId);if(p)p.balance-=Number(a.value)||0});let net=deliveryNet(o),sp=deliverySplit(net);o.netValue=net;o.allocations=sp.map(x=>({potId:x.id,value:x.val}));sp.forEach(x=>{let p=db.pots.find(q=>q.id===x.id);if(p)p.balance=(Number(p.balance)||0)+x.val});let i=db.deliveries.findIndex(x=>x.id===o.id);if(i>=0)db.deliveries[i]=o;else db.deliveries.push(o)}
-async function saveModal(type,id){if(!session)return showAuth();if(type==='delivery'){let o={id:id||uid(),date:fdate.value,value:+fvalue.value||0,start:fstart.value,end:fend.value,kmStart:+fks.value||0,kmEnd:+fke.value||0,fuelValue:+ffuel.value||0};o.hours=calcHours(o.start,o.end);o.kmTotal=Math.max(0,o.kmEnd-o.kmStart);applyDelivery(o);await saveCloud();closeModal();showToast('Entrega salva');return}let o={id:id||uid()};if(type==='fuel')Object.assign(o,{date:ffdate.value,km:+ffkm.value||0,value:+ffvalue.value||0});if(type==='maintenance')Object.assign(o,{date:mfdate.value,km:+mfkm.value||0,desc:mfdesc.value,value:+mfvalue.value||0,note:mfnote.value});let a=type==='fuel'?db.fuel:db.maintenance,i=a.findIndex(x=>x.id===o.id);if(i>=0)a[i]=o;else a.push(o);await saveCloud();closeModal();showToast('Salvo com sucesso')}
+async function saveModal(type,id){
+  if(!session)return showAuth();
+  if(type==='delivery'){
+    let o={id:id||uid(),date:fdate.value,value:+fvalue.value||0,start:fstart.value,end:fend.value,kmStart:+fks.value||0,kmEnd:+fke.value||0,fuelValue:+ffuel.value||0};
+    o.hours=calcHours(o.start,o.end);o.kmTotal=Math.max(0,o.kmEnd-o.kmStart);applyDelivery(o);await saveCloud();closeModal();showToast('Entrega salva');return
+  }
+  let o={id:id||uid()};
+  if(type==='fuel')Object.assign(o,{date:ffdate.value,km:+ffkm.value||0,value:+ffvalue.value||0});
+  if(type==='maintenance')Object.assign(o,{date:mfdate.value,km:+mfkm.value||0,desc:mfdesc.value,value:+mfvalue.value||0,note:mfnote.value});
+  let a=type==='fuel'?db.fuel:db.maintenance,i=a.findIndex(x=>x.id===o.id),old=i>=0?a[i]:null;
+  if(type==='maintenance'){
+    const pot=db.pots.find(x=>String(x.name).includes('Moto'));
+    if(pot){ if(old)pot.balance=(Number(pot.balance)||0)+(Number(old.value)||0); pot.balance=(Number(pot.balance)||0)-(Number(o.value)||0); }
+  }
+  if(i>=0)a[i]=o;else a.push(o);
+  await saveCloud();closeModal();showToast('Salvo com sucesso')
+}
 async function savePots(){let total=0;db.pots.forEach(p=>{p.pct=Number(document.getElementById('pct_'+p.id).value)||0;p.target=Number(document.getElementById('target_'+p.id).value)||0;total+=p.pct});if(total<=0)return alert('Informe as porcentagens.');db.pots.forEach(p=>p.pct=p.pct/total*100);await saveCloud();closeModal();showToast('Distribuição atualizada')}
-async function del(type,id){if(!confirm('Excluir este registro?'))return;if(type==='delivery'){let a=db.deliveries,i=a.findIndex(x=>x.id===id);if(i>=0){a[i].allocations?.forEach(al=>{let p=db.pots.find(x=>x.id===al.potId);if(p)p.balance-=Number(al.value)||0});a.splice(i,1)}}else{let a=type==='fuel'?db.fuel:db.maintenance,i=a.findIndex(x=>x.id===id);if(i>=0)a.splice(i,1)}await saveCloud();showToast('Excluído')}
+async function del(type,id){
+  if(!confirm('Excluir este registro?'))return;
+  if(type==='delivery'){
+    let a=db.deliveries,i=a.findIndex(x=>x.id===id);
+    if(i>=0){a[i].allocations?.forEach(al=>{let p=db.pots.find(x=>x.id===al.potId);if(p)p.balance-=Number(al.value)||0});a.splice(i,1)}
+  }else{
+    let a=type==='fuel'?db.fuel:db.maintenance,i=a.findIndex(x=>x.id===id);
+    if(i>=0){
+      if(type==='maintenance'){
+        const pot=db.pots.find(x=>String(x.name).includes('Moto'));
+        if(pot)pot.balance=(Number(pot.balance)||0)+(Number(a[i].value)||0);
+      }
+      a.splice(i,1)
+    }
+  }
+  await saveCloud();showToast('Excluído')
+}
 function exportData(){let blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup-financeiro.json';a.click()}
 async function importData(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=async()=>{try{db=normalizeLocal(JSON.parse(r.result));await saveCloud();showToast('Backup importado')}catch(err){alert('Arquivo inválido')}};r.readAsText(f)}
 async function cloudRows(){
@@ -137,7 +170,6 @@ function cloudToDb(c){
 async function deleteUserRows(table){const r=await supabaseClient.from(table).delete().eq('user_id',session.user.id);if(r.error)throw r.error}
 async function saveCloud(){
   if(!session){localSave();return}
-  localSave();
   try{
     await deleteUserRows('entrega_caixinhas');
     await deleteUserRows('entregas');
@@ -183,13 +215,17 @@ async function bootCloud(){
   const g=await supabaseClient.auth.getSession();session=g.data.session;
   if(!session){showAuth();render();return}
   try{
-    db=loadLocal();
+    // A partir da V14, o Supabase é a única fonte dos dados financeiros.
+    // Nunca restauramos entregas/abastecimentos/manutenções do localStorage.
     const c=await cloudRows();
-    const hasCloud=(c.deliveries.length+c.fuel.length+c.maintenance.length)>0;
-    const hasLocal=(db.deliveries.length+db.fuel.length+db.maintenance.length)>0;
-    if(!hasCloud&&hasLocal){await saveCloud();}
-    else if(c.pots.length||hasCloud){db=cloudToDb(c);localSave()}
-    else{db=normalizeLocal({pots:structuredClone(base.pots),deliveries:[],fuel:[],maintenance:[]});await saveCloud()}
+    const hasCloud=(c.deliveries.length+c.fuel.length+c.maintenance.length+c.pots.length)>0;
+    if(hasCloud){
+      db=cloudToDb(c);
+    }else{
+      db=normalizeLocal({pots:structuredClone(base.pots),deliveries:[],fuel:[],maintenance:[]});
+      await saveCloud();
+    }
+    clearLegacyFinancialCache();
     await ensureDefaultPots();
     hideAuth();cloudReady=true;render();
   }catch(err){console.error(err);showAuth('Não foi possível carregar o banco. Confira as tabelas e as permissões no Supabase.')}
